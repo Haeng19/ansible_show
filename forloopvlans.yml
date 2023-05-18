@@ -1,0 +1,112 @@
+# An Ansible playbook to deploy VLANs on a multilayer switch
+# Create new vlans on L2 using for loop
+# Create SVIs acting as the default gateway for the Vlans
+# Assign vlans to ports
+
+- name: Deploy some new VLANs in the specified ranges
+  hosts: Switchtest
+  gather_facts: false
+  connection: local
+  vars:
+   ansible_user: superuser
+
+  tasks:
+
+   - name: Deploy and configure some new VLANs on the targeted network device
+     vars:
+        named_vlans: [vlan_2, vlan_3, vlan_4, vlan_5, vlan_6]           # two newly defined lists to iterate through mutliple settings in this way
+        numbered_vlans: [2,3,4,5,6]
+     ios_vlans:
+      config:
+      - name: "{{item.0}}"
+        vlan_id: "{{item.1}}"
+        state: active
+        shutdown: disabled
+
+     loop: "{{ named_vlans | zip(numbered_vlans) | list }}"             # now to append the two different lists and iterate through them
+
+#Configure an SVI with one of the newy defined VLANs above create the subsequent SVIs and iterate through the different IP addresses
+
+   - name: deploy the L3 interface
+     vars:
+       vlan_ids: [interface vlan 2, interface vlan 3, interface vlan 4, interface vlan 5, interface vlan 6]
+       ip_addresses: [ip address 192.168.2.1 255.255.255.0 ,ip address 192.168.3.1 255.255.255.0 ,ip address 192.168.4.1 255.255.255.0 ,ip address 192.168.5.1 255.255.255.0, ip address 192.168.6.1 255.255.255.0]
+
+     ios_config:
+       parents: "{{item.0}}"
+       lines:
+         - "{{item.1}}"
+         - description successfuly deployed with Ansible
+
+     loop: "{{vlan_ids | zip(ip_addresses) | list}}"            # append the two different lists together
+   - name: Go through the looped interfaces and set to switchport access vlan 2
+     ios_config:
+       lines:
+       - switchport mode access                             # the intended commands for this list is to loop through the intended FastEthernet 1/0/2-5
+       - switchport access vlan 2
+       - description successfully deployed with Ansible
+       - no cdp enable
+       - no lldp transmit
+       - spanning-tree portfast
+       - spanning-tree bpduguard enable
+       - spanning-tree guard root
+
+       parents: "{{ id }}"
+
+     loop:
+      - "interface FastEthernet1/0/2"
+      - "interface FastEthernet1/0/3"
+      - "interface FastEthernet1/0/4"
+      - "interface FastEthernet1/0/5"
+     loop_control:
+        loop_var: id
+
+
+   - name: Go through the looped interfaces and set to switchport access vlan 3
+     ios_config:
+       lines:
+       - switchport mode access                             # the intended commands for this list is to loop through the intended FastEthernet 1/0/6-9
+       - switchport access vlan 3
+       - description successfully deployed with Ansible
+       - no cdp enable
+       - no lldp transmit
+       - spanning-tree portfast
+       - spanning-tree bpduguard enable
+       - spanning-tree guard root
+
+       parents: "{{ id }}"
+
+     loop:
+      - "interface FastEthernet1/0/6"
+      - "interface FastEthernet1/0/7"
+      - "interface FastEthernet1/0/8"
+      - "interface FastEthernet1/0/9"
+     loop_control:
+       loop_var: id
+
+
+# Ensure the successful deployment of the Vlans and then begin to chain together the different IOS modules to deploy multiple SVIs and Vlan
+   - name: Go through the looped interfaces and set to switchport access vlan 4
+     ios_config:
+       lines:
+       - switchport mode access                             # the intended commands for this list is to loop through the intended FastEthernet 1/0/6-9
+       - switchport access vlan 4
+       - description successfully deployed with Ansible
+       - no cdp enable
+       - no lldp transmit
+       - spanning-tree portfast
+       - spanning-tree bpduguard enable
+       - spanning-tree guard root
+
+       parents: "{{ id }}"
+
+
+     loop:
+      - "interface FastEthernet1/0/10"
+      - "interface FastEthernet1/0/11"
+      - "interface FastEthernet1/0/12"
+      - "interface FastEthernet1/0/13"
+     loop_control:
+       loop_var: id
+
+

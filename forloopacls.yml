@@ -1,0 +1,46 @@
+# An Ansible playbook to deploy Access Control Lists (ACLs) on the targeted network device
+# This playbook will loop through multiple different source and destination networks in the ACLs
+
+- name: Deploy the relevent ACLs to the router
+  hosts: Routerstest
+  gather_facts: false
+  connection: local
+  vars:
+    ansible_user: superuser
+
+  tasks:
+    - name: Configure the correct ACLs
+      vars:
+         source_net: [192.168.20.0, 192.168.30.0, 192.168.31.0]
+         dest_net: [10.0.0.0, 10.10.0.0, 172.16.7.0]
+         source_wild_mask: [0.0.0.255, 0.0.16.255, 0.0.0.3]
+         dest_wild_mask: [0.0.0.255, 0.0.0.255, 0.0.0.3]
+
+      cisco.ios.ios_acls:
+         config:
+           - afi: ipv4
+             acls:
+             - name: Ansible_ACL_For_Loop
+               acl_type: extended
+               aces:
+               - grant: deny
+                 protocol: tcp
+
+                 source:
+                   address: "{{item.0}}"
+                   wildcard_bits: "{{item.2}}"
+                 destination:
+                   address: "{{item.1}}"
+                   wildcard_bits: "{{item.3}}"
+                   port_protocol:
+                     eq: telnet
+
+
+      loop: "{{ source_net | zip(dest_net, source_wild_masks, dest_wild_mask) | list }}"
+
+
+# configuration is
+# ip access-list extended Ansible_ACL_For_Loop
+# deny tcp 192.168.20.0 0.0.0.255 10.0.0.0 0.0.0.255 eq telnet
+# deny tcp 192.168.30.0 0.0.16.255 10.10.0.0 0.0.0.255 eq telnet
+# deny tcp 192.168.31.0 0.0.0.3 172.16.7.0 0.0.0.3 eq telnet

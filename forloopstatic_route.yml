@@ -1,0 +1,51 @@
+# An Ansible playbook to deploy static routes on an L3 network device
+# To implement only IPv4 static routes
+# The destination IP address is to 192.168.1.0/24 with a next hop IP address of 192.168.2.1
+# This playbook would attempt to loop through multiple different IP address destinations
+
+- name: Deploy some of the new static routes onto an L3 network device
+  hosts: Routerstest
+  gather_facts: false
+  connection: local
+  vars:
+    ansible_user: superuser
+
+  tasks:
+  # A for looped static route deployement for multiple destination IP addresses
+    - name: To deploy multiple IPv4 static routes using a for loop
+      ios_static_routes:
+       config:
+         - address_families:
+            - afi: ipv4
+              routes:
+              - dest: "{{ dest }}"
+                next_hops:
+                 - forward_router_address: 192.168.2.1
+                   name: route_by_Ansible_for_loop
+                   distance_metric: 20
+      loop:                             # this will loop all the destination IP addresses listed after the indentation
+       - 192.168.3.0/24
+       - 192.168.4.0/24
+       - 192.168.5.0/24
+      loop_control:
+        loop_var: dest
+
+
+
+# A new static IPv4 route to deployed on a VRF which is name as Red, destination IP address of 172.16.1.0/24 with a next hop IP address of 192.168.1.1
+    - name: To deploy a new static route
+      ios_static_routes:
+       config:
+        - vrf: Red
+          address_families:
+          - afi: ipv4
+            routes:
+            - dest: 172.16.1.0/24
+              next_hops:
+               - forward_router_address: 192.168.1.1
+                 name: VRF_Route_By_Ansible
+                 distance_metric: 20
+
+
+# The name parameter is an added compenent that to specifiy the route has been deployed by Ansible
+

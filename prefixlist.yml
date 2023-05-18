@@ -1,0 +1,38 @@
+# An Ansible playbook to deploy multiple prefix lists on the targeted devices.
+# This playbook will loop through multiple different prefixes and prefix lengths
+
+- name: Deploy the relevent prefix list on the targeted nodes
+  hosts: Routerstest
+  gather_facts: false
+  connection: local
+  vars:
+    ansible_user: superuser
+
+  tasks:
+    - name: Configure the correct Prefix lists
+      vars:
+         prefix_sor: ["192.168.2.0/24", "192.168.0.0/16", "172.168.0.0/16"]
+         ge_len: [25, 18, 19]
+         le_len: [30, 24, 25]
+         seq: [10, 20, 30]
+
+      cisco.ios.ios_prefix_lists:
+        config:
+          - afi: ipv4
+            prefix_lists:
+              - name: ansible_test
+                description: This is an Ansible_test
+                entries:
+                  - action: permit
+                    prefix: "{{ item.0 }}"
+                    ge: "{{ item.1 }}"
+                    le: "{{ item.2  }}"
+                    sequence: "{{ item.3 }}"
+
+      loop: "{{ prefix_sor | zip(ge_len, le_len, seq) | list }}"
+
+
+# Intended commands =
+# ip prefix-list ansible_test seq 10 permit 192.168.2.0/24 ge 24 le 30
+# ip prefix-list ansible_test seq 20 permit 192.168.0.0/16 ge 18 le 30
+# ip prefix-list ansible_test seq 30 permit 172.168.0.0/16 ge 19 le 30
