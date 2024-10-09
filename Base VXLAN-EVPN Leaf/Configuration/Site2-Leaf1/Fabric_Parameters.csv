@@ -1,0 +1,2 @@
+Multicast_Range,RP_Address,Routing_Loopback,VTEP_Loopback,L3VNI,VRF_Name,VRF_VLAN,ASN
+239.1.1.0/25,10.252.254.1,10.22.0.1/32,10.32.0.1/32,30000,PROD_VRF,3000,65002

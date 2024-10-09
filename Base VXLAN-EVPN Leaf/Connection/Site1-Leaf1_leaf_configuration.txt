@@ -1,0 +1,146 @@
+***** Base features Non-VPC Leaf *********
+ feature nxapi
+ nv overlay evpn
+ feature ospf 
+ feature bgp 
+ feature pim 
+ feature interface-vlan 
+ feature vn-segment-vlan-based 
+ feature lacp 
+ feature dhcp
+feature lldp 
+ feature nv overlay 
+ feature ngoam
+
+
+***** AnyCast MAC address Configuration***** 
+
+ fabric forwarding anycast-gateway-mac 2020.0000.00cc
+***** Multicast Configuration *****
+ ip pim rp-address 10.254.254.1 group-list 239.1.1.0/25 
+ ip pim ssm range 232.0.0.0/8
+
+
+***** Vlan Initial Configuration ***** 
+
+vlan 10
+vn-segment 10010
+vlan 20
+vn-segment 10020
+****Tagging and Redistribution for Network Prefixes****
+
+ route-map fabric-rmap-redist-subnet permit 10 
+ match tag 12345
+
+******* VRF VLAN Configuration *********
+vlan 3000
+name PROD_VRF
+vn-segment 30000
+*****L3VNI VRF Configuration****
+vrf context PROD_VRF
+description PROD_VRF
+vni 30000
+rd auto
+address-family ipv4 unicast
+route-target both auto
+route-target both auto evpn
+address-family ipv6 unicast
+route-target both auto
+route-target both auto evpn
+
+interface Vlan3000
+description PROD_VRF
+mtu 9216
+vrf member PROD_VRF
+no ip redirects
+ip forward
+ipv6 address use-link-local-only
+no ipv6 redirects
+no shut
+
+
+****** SVI Configuration ******
+interface Vlan10
+no shutdown
+vrf member PROD_VRF
+no ip redirects
+ip address 192.168.10.1/24 tag 12345
+no ipv6 redirects
+fabric forwarding mode anycast-gateway
+interface Vlan20
+no shutdown
+vrf member PROD_VRF
+no ip redirects
+ip address 192.168.20.1/24 tag 12345
+no ipv6 redirects
+fabric forwarding mode anycast-gateway
+
+
+
+*** NVE Configuration ***
+interface nve1
+no shutdown
+host-reachability protocol bgp
+source-interface loopback1
+member vni 10010
+mcast-group 239.1.1.1
+member vni 10020
+mcast-group 239.1.1.1
+member vni 30000 associate-vrf
+
+
+
+**** Loopback Configuration ****
+interface loopback0
+description Routing loopback interface
+ip address 10.2.0.1/32
+ip router ospf UNDERLAY area 0.0.0.0
+ip pim sparse-mode
+interface loopback1
+description VTEP Interface
+ip address 10.3.0.1/32
+ip router ospf UNDERLAY area 0.0.0.0
+ip pim sparse-mode
+
+
+
+***Routing process configuration***
+router ospf UNDERLAY
+router-id 10.2.0.1
+router bgp 65001
+router-id 10.2.0.1
+neighbor 10.2.0.5
+remote-as 65001
+update-source loopback0
+address-family l2vpn evpn
+send-community
+send-community extended
+vrf PROD_VRF
+address-family ipv4 unicast
+advertise l2vpn evpn
+redistribute direct route-map fabric-rmap-redist-subnet
+maximum-paths ibgp 2
+address-family ipv6 unicast
+advertise l2vpn evpn
+redistribute direct route-map fabric-rmap-redist-subnet
+maximum-paths ibgp 2
+evpn
+vni 10010 l2
+rd auto
+route-target import auto
+route-target export auto
+vni 10020 l2
+rd auto
+route-target import auto
+route-target export auto
+
+
+interface Eth1/1
+no switchport
+mtu 9216
+ip address 172.16.1.1/30
+ip ospf network point-to-point
+ip router ospf UNDERLAY area 0.0.0.0
+ip pim sparse-mode
+no shutdown 
+
